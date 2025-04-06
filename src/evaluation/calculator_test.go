@@ -128,15 +128,6 @@ func TestCalculate(t *testing.T) {
 			},
 			wantError: true,
 		},
-		{
-			name: "unknown operator",
-			rpn: []tokenizer.Token{
-				{tokenizer.Number, "2", 0},
-				{tokenizer.Number, "3", 0},
-				{tokenizer.Operator, "^", 0},
-			},
-			wantError: true,
-		},
 	}
 
 	for _, tt := range tests {
@@ -227,8 +218,96 @@ func TestAllFunctions(t *testing.T) {
 	}
 }
 
+func TestCalculator(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected float64
+	}{
+		{
+			name:     "simple addition",
+			input:    "2 + 3",
+			expected: 5,
+		},
+		{
+			name:     "simple subtraction",
+			input:    "5 - 3",
+			expected: 2,
+		},
+		{
+			name:     "simple multiplication",
+			input:    "4 * 2",
+			expected: 8,
+		},
+		{
+			name:     "simple division",
+			input:    "8 / 4",
+			expected: 2,
+		},
+		{
+			name:     "exponentiation",
+			input:    "2 ^ 3",
+			expected: 8,
+		},
+		{
+			name:     "parentheses",
+			input:    "(2 + 3) * 4",
+			expected: 20,
+		},
+		{
+			name:     "nested parentheses",
+			input:    "2 * (3 + (4 - 1))",
+			expected: 12,
+		},
+		{
+			name:     "exponentiation with parentheses",
+			input:    "2 ^ (3 + 1)",
+			expected: 16,
+		},
+		{
+			name:     "complex expression",
+			input:    "2 + 3 * 4 ^ 2",
+			expected: 50,
+		},
+		{
+			name:     "scientific notation",
+			input:    "1.23e5 + 4.56e-2",
+			expected: 123000.0456,
+		},
+		{
+			name:     "mixed operations",
+			input:    "(2 + 3) * 4 ^ 2 - 10 / 2",
+			expected: 75,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tokens, err := tokenizer.Tokenize(tt.input)
+			if err != nil {
+				t.Fatalf("Tokenize failed: %v", err)
+			}
+
+			rpn, err := evaluation.ToRPN(tokens)
+			if err != nil {
+				t.Fatalf("ToRPN failed: %v", err)
+			}
+
+			result, err := evaluation.Calculate(rpn, false)
+			if err != nil {
+				t.Fatalf("Calculate failed: %v", err)
+			}
+
+			if !almostEqual(result, tt.expected) {
+				t.Errorf("Calculate(%q) = %v, want %v", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
 func almostEqual(a, b float64) bool {
-	return math.Abs(a-b) < 1e-9
+	const epsilon = 1e-10
+	return (a-b) < epsilon && (b-a) < epsilon
 }
 
 func floatToString(f float64) string {

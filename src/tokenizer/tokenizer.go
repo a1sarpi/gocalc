@@ -35,6 +35,7 @@ func Tokenize(input string) ([]Token, error) {
 			if r == '.' {
 				dotCount++
 			}
+
 			for i < len(runes) && (unicode.IsDigit(runes[i]) || runes[i] == '.') {
 				if runes[i] == '.' {
 					dotCount++
@@ -47,6 +48,28 @@ func Tokenize(input string) ([]Token, error) {
 			if dotCount == 1 && (start == i-1 || runes[start] == '.') {
 				return nil, ErrInvalidNumber(start)
 			}
+
+			if i < len(runes) && (runes[i] == 'e' || runes[i] == 'E') {
+				ePos := i
+				i++
+
+				if i < len(runes) && (runes[i] == '+' || runes[i] == '-') {
+					i++
+				}
+
+				if i >= len(runes) || !unicode.IsDigit(runes[i]) {
+					return nil, ErrInvalidNumber(ePos)
+				}
+
+				for i < len(runes) && unicode.IsDigit(runes[i]) {
+					i++
+				}
+
+				if i < len(runes) && unicode.IsLetter(runes[i]) {
+					return nil, ErrInvalidNumber(i)
+				}
+			}
+
 			tokens = append(tokens, Token{Number, string(runes[start:i]), start})
 			prevToken = tokens[len(tokens)-1]
 
@@ -150,7 +173,7 @@ func validateExpressionStructure(tokens []Token) error {
 
 func isSupportedOperator(r rune) bool {
 	switch r {
-	case '+', '-', '*', '/':
+	case '+', '-', '*', '/', '^':
 		return true
 	default:
 		return false

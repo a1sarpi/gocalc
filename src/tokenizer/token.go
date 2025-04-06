@@ -18,10 +18,11 @@ type Token struct {
 }
 
 var Operators = map[string]TokenType{
-	"+": Operator,
-	"-": Operator,
-	"*": Operator,
-	"/": Operator,
+	"+":  Operator,
+	"-":  Operator,
+	"*":  Operator,
+	"/":  Operator,
+	"**": Operator,
 }
 
 var Functions = map[string]TokenType{}
