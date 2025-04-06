@@ -4,14 +4,35 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"time"
 
 	"github.com/a1sarpi/gocalc/src/stack"
 	"github.com/a1sarpi/gocalc/src/tokenizer"
 )
 
-var ErrDivisionByZero = fmt.Errorf("division by zero")
-var ErrInvalidRPNSyntax = fmt.Errorf("invalid RPN syntax")
-var ErrArithmeticOverflow = fmt.Errorf("arithmetic overflow")
+var (
+	ErrDivisionByZero     = fmt.Errorf("division by zero")
+	ErrInvalidRPNSyntax   = fmt.Errorf("invalid RPN syntax")
+	ErrArithmeticOverflow = fmt.Errorf("arithmetic overflow")
+	ErrTimeout            = fmt.Errorf("calculation timeout")
+)
+
+const (
+	DefaultCalculationTime = 5 * time.Second
+	TestCalculationTime    = 100 * time.Millisecond
+	MaxFloat64             = 1.7976931348623157e+308
+	MinFloat64             = -1.7976931348623157e+308
+)
+
+func checkOverflow(x float64) error {
+	if math.IsInf(x, 0) || math.IsNaN(x) {
+		return ErrArithmeticOverflow
+	}
+	if x > MaxFloat64 || x < MinFloat64 {
+		return ErrArithmeticOverflow
+	}
+	return nil
+}
 
 func ToRPN(tokens []tokenizer.Token) ([]tokenizer.Token, error) {
 	output := make([]tokenizer.Token, 0, len(tokens))
@@ -69,13 +90,25 @@ func ToRPN(tokens []tokenizer.Token) ([]tokenizer.Token, error) {
 }
 
 func Calculate(tokens []tokenizer.Token, useRadians bool) (float64, error) {
+	return CalculateWithTimeout(tokens, useRadians, DefaultCalculationTime)
+}
+
+func CalculateWithTimeout(tokens []tokenizer.Token, useRadians bool, timeout time.Duration) (float64, error) {
+	startTime := time.Now()
 	s := stack.New[float64]()
 
 	for _, token := range tokens {
+		if time.Since(startTime) > timeout {
+			return 0, ErrTimeout
+		}
+
 		switch token.Type {
 		case tokenizer.Number:
 			val, err := strconv.ParseFloat(token.Value, 64)
 			if err != nil {
+				return 0, err
+			}
+			if err := checkOverflow(val); err != nil {
 				return 0, err
 			}
 			s.Push(val)
@@ -95,49 +128,53 @@ func Calculate(tokens []tokenizer.Token, useRadians bool) (float64, error) {
 
 			x := s.Pop()
 
+			var result float64
 			switch token.Value {
 			case "sin":
 				if !useRadians {
 					x = x * math.Pi / 180
 				}
-				s.Push(math.Sin(x))
+				result = math.Sin(x)
 			case "cos":
 				if !useRadians {
 					x = x * math.Pi / 180
 				}
-				s.Push(math.Cos(x))
+				result = math.Cos(x)
 			case "tan":
 				if !useRadians {
 					x = x * math.Pi / 180
 				}
-				s.Push(math.Tan(x))
+				result = math.Tan(x)
 			case "asin":
-				result := math.Asin(x)
+				result = math.Asin(x)
 				if !useRadians {
 					result = result * 180 / math.Pi
 				}
-				s.Push(result)
 			case "acos":
-				result := math.Acos(x)
+				result = math.Acos(x)
 				if !useRadians {
 					result = result * 180 / math.Pi
 				}
-				s.Push(result)
 			case "atan":
-				result := math.Atan(x)
+				result = math.Atan(x)
 				if !useRadians {
 					result = result * 180 / math.Pi
 				}
-				s.Push(result)
 			case "log2":
-				s.Push(math.Log2(x))
+				result = math.Log2(x)
 			case "log10":
-				s.Push(math.Log10(x))
+				result = math.Log10(x)
 			case "sqrt":
-				s.Push(math.Sqrt(x))
+				result = math.Sqrt(x)
 			case "abs":
-				s.Push(math.Abs(x))
+				result = math.Abs(x)
+			case "exp":
+				result = math.Exp(x)
 			}
+			if err := checkOverflow(result); err != nil {
+				return 0, err
+			}
+			s.Push(result)
 
 		case tokenizer.Operator:
 			if s.Len() < 2 {
@@ -147,21 +184,26 @@ func Calculate(tokens []tokenizer.Token, useRadians bool) (float64, error) {
 			b := s.Pop()
 			a := s.Pop()
 
+			var result float64
 			switch token.Value {
 			case "+":
-				s.Push(a + b)
+				result = a + b
 			case "-":
-				s.Push(a - b)
+				result = a - b
 			case "*":
-				s.Push(a * b)
+				result = a * b
 			case "/":
 				if b == 0 {
 					return 0, ErrDivisionByZero
 				}
-				s.Push(a / b)
+				result = a / b
 			case "^":
-				s.Push(math.Pow(a, b))
+				result = math.Pow(a, b)
 			}
+			if err := checkOverflow(result); err != nil {
+				return 0, err
+			}
+			s.Push(result)
 		}
 	}
 
@@ -170,6 +212,9 @@ func Calculate(tokens []tokenizer.Token, useRadians bool) (float64, error) {
 	}
 
 	result := s.Pop()
+	if err := checkOverflow(result); err != nil {
+		return 0, err
+	}
 	return result, nil
 }
 
