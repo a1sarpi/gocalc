@@ -6,15 +6,11 @@ import (
 	"strings"
 
 	"github.com/a1sarpi/gocalc/src/evaluation"
-	"github.com/a1sarpi/gocalc/src/stack"
 	"github.com/a1sarpi/gocalc/src/tokenizer"
 	"github.com/spf13/cobra"
 )
 
-var (
-	useRadians bool
-	debug      bool
-)
+var useRadians bool
 
 var rootCmd = &cobra.Command{
 	Use:   "calc",
@@ -30,7 +26,6 @@ var rootCmd = &cobra.Command{
 
 func init() {
 	rootCmd.PersistentFlags().BoolVarP(&useRadians, "radians", "r", false, "Use radians for trigonometric functions")
-	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "Enable debug output")
 }
 
 func main() {
@@ -55,14 +50,6 @@ func processExpression(input string) error {
 		}
 	}()
 
-	evaluation.Debug = debug
-	stack.Debug = debug
-
-	if debug {
-		fmt.Printf("Input expression: %q\n", input)
-	}
-
-	// Удаляем имя команды из входной строки, если оно присутствует
 	input = strings.TrimPrefix(input, "calc")
 	input = strings.TrimSpace(input)
 
@@ -70,16 +57,10 @@ func processExpression(input string) error {
 	if err != nil {
 		return fmt.Errorf("tokenization error: %v", err)
 	}
-	if debug {
-		fmt.Printf("Tokens: %v\n", tokens)
-	}
 
 	rpn, err := evaluation.ToRPN(tokens)
 	if err != nil {
 		return fmt.Errorf("RPN conversion error: %v", err)
-	}
-	if debug {
-		fmt.Printf("RPN: %v\n", rpn)
 	}
 
 	result, err := evaluation.Calculate(rpn, useRadians)
@@ -87,12 +68,6 @@ func processExpression(input string) error {
 		return fmt.Errorf("calculation error: %v", err)
 	}
 
-	if debug {
-		fmt.Printf("Result before formatting: %g\n", result)
-	}
 	fmt.Fprintf(os.Stdout, "%.15f\n", result)
-	if debug {
-		fmt.Printf("Result after formatting: %.15f\n", result)
-	}
 	return nil
 }

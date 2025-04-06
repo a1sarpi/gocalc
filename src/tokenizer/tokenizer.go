@@ -75,13 +75,20 @@ func Tokenize(input string) ([]Token, error) {
 
 		case unicode.IsLetter(r):
 			start := i
-			for i < len(runes) && unicode.IsLetter(runes[i]) {
+			for i < len(runes) && (unicode.IsLetter(runes[i]) || unicode.IsDigit(runes[i])) {
 				i++
 			}
 			if i > 0 && start > 0 && unicode.IsDigit(runes[start-1]) {
 				return nil, ErrInvalidNumber(start)
 			}
-			tokens = append(tokens, Token{Function, string(runes[start:i]), start})
+			name := string(runes[start:i])
+			if _, ok := Constants[name]; ok {
+				tokens = append(tokens, Token{Constant, name, start})
+			} else if _, ok := Functions[name]; ok {
+				tokens = append(tokens, Token{Function, name, start})
+			} else {
+				return nil, ErrUnknownSymbol(start)
+			}
 			prevToken = tokens[len(tokens)-1]
 
 		case isSupportedOperator(r):
@@ -115,57 +122,73 @@ func Tokenize(input string) ([]Token, error) {
 
 func validateExpressionStructure(tokens []Token) error {
 	if len(tokens) == 0 {
-		return nil
+		return ErrInvalidRPNSyntax(0)
 	}
 
-	first := tokens[0].Type
-	last := tokens[len(tokens)-1].Type
-
-	if first == Operator || first == RightBrace {
+	if tokens[0].Type == Operator && tokens[0].Value != "-" {
 		return ErrInvalidRPNSyntax(tokens[0].Pos)
 	}
 
-	if last == Operator || last == LeftBrace {
+	if tokens[len(tokens)-1].Type == Operator {
 		return ErrInvalidRPNSyntax(tokens[len(tokens)-1].Pos)
 	}
 
 	parenCount := 0
-	for i, token := range tokens {
+	for i := 0; i < len(tokens); i++ {
+		token := tokens[i]
 		switch token.Type {
-		case Number:
-			if i > 0 && tokens[i-1].Type == Number {
-				return ErrInvalidNumber(token.Pos)
+		case Operator:
+			if i == len(tokens)-1 {
+				return ErrInvalidRPNSyntax(token.Pos)
 			}
+			next := tokens[i+1]
+			if next.Type != Number && next.Type != Constant && next.Type != LeftBrace && next.Type != Function && (next.Type != Operator || next.Value != "-") {
+				return ErrInvalidRPNSyntax(token.Pos)
+			}
+
+		case Function:
+			if i == len(tokens)-1 || tokens[i+1].Type != LeftBrace {
+				return ErrInvalidRPNSyntax(token.Pos)
+			}
+
 		case LeftBrace:
 			parenCount++
-			if i > 0 && tokens[i-1].Type == Number {
-				return ErrNotEnoughOperands
+			if i == len(tokens)-1 {
+				return ErrMismatchedParentheses(token.Pos)
 			}
+			next := tokens[i+1]
+			if next.Type != Number && next.Type != Constant && next.Type != LeftBrace && next.Type != Function && (next.Type != Operator || next.Value != "-") {
+				return ErrInvalidRPNSyntax(token.Pos)
+			}
+
 		case RightBrace:
 			parenCount--
 			if parenCount < 0 {
 				return ErrMismatchedParentheses(token.Pos)
 			}
-			if i > 0 && tokens[i-1].Type == Operator {
-				return ErrNotEnoughOperands
+			if i < len(tokens)-1 {
+				next := tokens[i+1]
+				if next.Type != Operator && next.Type != RightBrace {
+					return ErrInvalidRPNSyntax(token.Pos)
+				}
 			}
-		case Operator:
-			if i == 0 || i == len(tokens)-1 {
-				continue
+
+		case Number, Constant:
+			if i < len(tokens)-1 {
+				next := tokens[i+1]
+				if next.Type != Operator && next.Type != RightBrace {
+					return ErrInvalidRPNSyntax(token.Pos)
+				}
 			}
-			prev := tokens[i-1].Type
-			next := tokens[i+1].Type
-			if prev == Operator || prev == LeftBrace {
-				return ErrInvalidRPNSyntax(token.Pos)
-			}
-			if next == Operator || next == RightBrace {
-				return ErrInvalidRPNSyntax(token.Pos)
-			}
+		}
+
+		if i == len(tokens)-1 && parenCount > 0 {
+			return ErrMismatchedParentheses(token.Pos)
 		}
 	}
 
 	if parenCount != 0 {
-		return ErrMismatchedParentheses(0)
+		return ErrMismatchedParentheses(tokens[len(tokens)-1].Pos)
 	}
 
 	return nil

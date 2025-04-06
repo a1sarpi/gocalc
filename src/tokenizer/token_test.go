@@ -208,6 +208,39 @@ func TestTokenizeOperations(t *testing.T) {
 				{tokenizer.RightBrace, ")", 10},
 			},
 		},
+		{
+			name:  "pi constant",
+			input: "pi",
+			want: []tokenizer.Token{
+				{tokenizer.Constant, "pi", 0},
+			},
+		},
+		{
+			name:  "e constant",
+			input: "e",
+			want: []tokenizer.Token{
+				{tokenizer.Constant, "e", 0},
+			},
+		},
+		{
+			name:  "expression with constants",
+			input: "pi * e",
+			want: []tokenizer.Token{
+				{tokenizer.Constant, "pi", 0},
+				{tokenizer.Operator, "*", 3},
+				{tokenizer.Constant, "e", 5},
+			},
+		},
+		{
+			name:  "function with constant",
+			input: "sin(pi)",
+			want: []tokenizer.Token{
+				{tokenizer.Function, "sin", 0},
+				{tokenizer.LeftBrace, "(", 3},
+				{tokenizer.Constant, "pi", 4},
+				{tokenizer.RightBrace, ")", 6},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -244,6 +277,9 @@ func TestInvalidExpressions(t *testing.T) {
 		{name: "unclosed parentheses", input: "(2 + 3"},
 		{name: "operator after right parenthesis", input: "(2 + 3) +"},
 		{name: "operator before left parenthesis", input: "2 + (3"},
+		{name: "unknown constant", input: "unknown"},
+		{name: "constant with number", input: "pi2"},
+		{name: "constant with letter", input: "pix"},
 	}
 
 	for _, tt := range tests {
