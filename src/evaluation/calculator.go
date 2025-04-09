@@ -160,6 +160,8 @@ func CalculateWithTimeout(tokens []tokenizer.Token, useRadians bool, timeout tim
 				if !useRadians {
 					result = result * 180 / math.Pi
 				}
+			case "log":
+				result = math.Log(x)
 			case "log2":
 				result = math.Log2(x)
 			case "log10":

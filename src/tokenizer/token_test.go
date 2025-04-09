@@ -75,6 +75,42 @@ func TestTokenizeNumbers(t *testing.T) {
 				{Type: tokenizer.Number, Value: "1.25E+09", Pos: 0},
 			},
 		},
+		{
+			name:  "unary minus at start",
+			input: "-5",
+			want: []tokenizer.Token{
+				{Type: tokenizer.Number, Value: "-5", Pos: 0},
+			},
+		},
+		{
+			name:  "unary minus after operator",
+			input: "2 + -5",
+			want: []tokenizer.Token{
+				{Type: tokenizer.Number, Value: "2", Pos: 0},
+				{Type: tokenizer.Operator, Value: "+", Pos: 2},
+				{Type: tokenizer.Number, Value: "-5", Pos: 4},
+			},
+		},
+		{
+			name:  "unary minus after parenthesis",
+			input: "(-5)",
+			want: []tokenizer.Token{
+				{Type: tokenizer.LeftBrace, Value: "(", Pos: 0},
+				{Type: tokenizer.Number, Value: "-5", Pos: 1},
+				{Type: tokenizer.RightBrace, Value: ")", Pos: 3},
+			},
+		},
+		{
+			name:  "unary minus in expression",
+			input: "2 * (-5)",
+			want: []tokenizer.Token{
+				{Type: tokenizer.Number, Value: "2", Pos: 0},
+				{Type: tokenizer.Operator, Value: "*", Pos: 2},
+				{Type: tokenizer.LeftBrace, Value: "(", Pos: 4},
+				{Type: tokenizer.Number, Value: "-5", Pos: 5},
+				{Type: tokenizer.RightBrace, Value: ")", Pos: 7},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -239,6 +275,42 @@ func TestTokenizeOperations(t *testing.T) {
 				{tokenizer.LeftBrace, "(", 3},
 				{tokenizer.Constant, "pi", 4},
 				{tokenizer.RightBrace, ")", 6},
+			},
+		},
+		{
+			name:  "unary minus before function",
+			input: "-sin(1)",
+			want: []tokenizer.Token{
+				{tokenizer.Operator, "-", 0},
+				{tokenizer.Function, "sin", 1},
+				{tokenizer.LeftBrace, "(", 4},
+				{tokenizer.Number, "1", 5},
+				{tokenizer.RightBrace, ")", 6},
+			},
+		},
+		{
+			name:  "unary minus before parentheses",
+			input: "-(1 + 2)",
+			want: []tokenizer.Token{
+				{tokenizer.Operator, "-", 0},
+				{tokenizer.LeftBrace, "(", 1},
+				{tokenizer.Number, "1", 2},
+				{tokenizer.Operator, "+", 4},
+				{tokenizer.Number, "2", 6},
+				{tokenizer.RightBrace, ")", 7},
+			},
+		},
+		{
+			name:  "unary minus before function in expression",
+			input: "2 * -sin(1)",
+			want: []tokenizer.Token{
+				{tokenizer.Number, "2", 0},
+				{tokenizer.Operator, "*", 2},
+				{tokenizer.Operator, "-", 4},
+				{tokenizer.Function, "sin", 5},
+				{tokenizer.LeftBrace, "(", 8},
+				{tokenizer.Number, "1", 9},
+				{tokenizer.RightBrace, ")", 10},
 			},
 		},
 	}

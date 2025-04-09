@@ -197,6 +197,12 @@ func TestAllFunctions(t *testing.T) {
 		{"sin(30°)", "sin", 30, 0.5, false},
 		{"cos(60°)", "cos", 60, 0.5, false},
 		{"sin(π/2)", "sin", math.Pi / 2, 1, true},
+		{"ln(e)", "log", math.E, 1, true},
+		{"log2(8)", "log2", 8, 3, true},
+		{"log10(100)", "log10", 100, 2, true},
+		{"ln(1)", "log", 1, 0, true},
+		{"ln(0)", "log", 0, math.Inf(-1), true},
+		{"ln(-1)", "log", -1, math.NaN(), true},
 	}
 
 	for _, tt := range tests {

@@ -66,7 +66,7 @@ func TestPerformanceAndLimits(t *testing.T) {
 		{
 			name:          "Complex logarithmic chain",
 			input:         strings.Repeat("ln(", 5) + "e" + strings.Repeat(")", 5),
-			expectedError: true, 
+			expectedError: true,
 		},
 		{
 			name:          "Mixed operations with large numbers",

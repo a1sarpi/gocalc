@@ -19,9 +19,14 @@ var rootCmd = &cobra.Command{
 		if len(args) == 0 {
 			return fmt.Errorf("expression is required")
 		}
-		input := strings.Join(args, " ")
-		return processExpression(input)
+		// Если первый аргумент --, берем следующий
+		if args[0] == "--" && len(args) > 1 {
+			return processExpression(args[1])
+		}
+		// Иначе берем первый аргумент
+		return processExpression(args[0])
 	},
+	DisableFlagParsing: true,
 }
 
 func init() {

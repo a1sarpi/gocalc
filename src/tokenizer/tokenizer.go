@@ -17,16 +17,26 @@ func Tokenize(input string) ([]Token, error) {
 		case unicode.IsSpace(r):
 			i++
 
-		case r == '-' && (i == 0 || isOperator(prevToken)):
+		case r == '-' && (i == 0 || isOperator(prevToken) || prevToken.Type == LeftBrace):
 			start := i
 			i++
-			if i >= len(runes) || !unicode.IsDigit(runes[i]) {
-				return nil, ErrInvalidNumber(start)
-			}
-			for i < len(runes) && (unicode.IsDigit(runes[i]) || runes[i] == '.') {
+			for i < len(runes) && unicode.IsSpace(runes[i]) {
 				i++
 			}
-			tokens = append(tokens, Token{Number, string(runes[start:i]), start})
+			if i < len(runes) {
+				if unicode.IsDigit(runes[i]) {
+					for i < len(runes) && (unicode.IsDigit(runes[i]) || runes[i] == '.') {
+						i++
+					}
+					tokens = append(tokens, Token{Number, string(runes[start:i]), start})
+				} else if runes[i] == '(' || unicode.IsLetter(runes[i]) {
+					tokens = append(tokens, Token{Operator, "-", start})
+				} else {
+					return nil, ErrInvalidNumber(start)
+				}
+			} else {
+				return nil, ErrInvalidNumber(start)
+			}
 			prevToken = tokens[len(tokens)-1]
 
 		case unicode.IsDigit(r) || r == '.':
